@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>Luis Felipe Serna · Panel de valoraciones</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #12201a;
+    --surface: #1b2e25;
+    --surface-2: #223a2e;
+    --line: #35513f;
+    --accent: #4fae7d;
+    --text: #f2f7f4;
+    --text-dim: #a9c2b3;
+    --text-faint: #6f8a7a;
+    --ok: #6fcf97;
+    --warn: #f2c94c;
+    --danger: #eb5757;
+    --info: #7fb3f2;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; background: var(--bg); color: var(--text); font-family:'Inter',system-ui,sans-serif; -webkit-font-smoothing: antialiased; }
+  .mono { font-family:'Space Mono',monospace; }
+  .display { font-family:'Space Grotesk',sans-serif; }
+
+  #gate { position:fixed; inset:0; z-index:50; background:var(--bg); display:flex; align-items:center; justify-content:center; flex-direction:column; gap:16px; padding:24px; }
+  #gate h1 { font-family:'Space Grotesk',sans-serif; font-size:1.3rem; margin:0; }
+  #gate p { color:var(--text-dim); font-size:0.85rem; margin:0; text-align:center; max-width:300px; }
+  #gate input { background:var(--surface); border:1px solid var(--line); color:var(--text); padding:14px 16px; border-radius:var(--radius); font-size:1rem; width:100%; max-width:280px; text-align:center; }
+  #gate button { background:var(--accent); color:#12201a; border:none; font-weight:700; padding:14px 28px; border-radius:var(--radius); font-size:0.95rem; width:100%; max-width:280px; }
+  #gate .err { color:var(--danger); font-size:0.8rem; height:16px; }
+
+  #app { display:none; max-width:720px; margin:0 auto; padding-bottom:90px; }
+  header.top { padding:22px 20px 16px; border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--bg); z-index:10; }
+  header.top h1 { font-family:'Space Grotesk',sans-serif; font-size:1.2rem; font-weight:700; margin:0; }
+  header.top .sub { color:var(--text-dim); font-size:0.78rem; margin-top:2px; }
+
+  nav.tabs { display:flex; gap:6px; margin-top:16px; background:var(--surface); border-radius:12px; padding:4px; }
+  nav.tabs button { flex:1; background:transparent; border:none; color:var(--text-dim); padding:10px 6px; border-radius:9px; font-size:0.82rem; font-weight:600; }
+  nav.tabs button.active { background:var(--accent); color:#12201a; }
+
+  section.view { padding:18px 20px; display:none; }
+  section.view.active { display:block; }
+
+  .empty { text-align:center; padding:60px 20px; color:var(--text-faint); }
+  .empty .big { font-size:2rem; margin-bottom:8px; }
+
+  .filters { display:flex; gap:6px; margin-bottom:14px; overflow-x:auto; }
+  .filters button { flex:0 0 auto; background:var(--surface); border:1px solid var(--line); color:var(--text-dim); padding:7px 14px; border-radius:99px; font-size:0.78rem; font-weight:600; white-space:nowrap; }
+  .filters button.active { background:var(--accent); color:#12201a; border-color:var(--accent); }
+
+  .ticket { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:16px; margin-bottom:12px; }
+  .ticket-row { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .ticket-name { font-weight:600; font-size:1rem; }
+  .ticket-time { font-family:'Space Mono',monospace; font-size:0.95rem; color:var(--accent); white-space:nowrap; }
+  .ticket-meta { color:var(--text-dim); font-size:0.82rem; margin-top:4px; }
+  .modalidad-pill { display:inline-block; font-size:0.68rem; font-weight:700; padding:3px 9px; border-radius:99px; margin-top:8px; margin-right:6px; text-transform:uppercase; letter-spacing:0.03em; }
+  .modalidad-video { background:rgba(127,179,242,0.15); color:var(--info); }
+  .modalidad-presencial { background:rgba(242,201,76,0.15); color:var(--warn); }
+  .ticket-status { display:inline-block; font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.03em; padding:3px 9px; border-radius:99px; margin-top:8px; }
+  .status-pendiente { background:rgba(242,201,76,0.15); color:var(--warn); }
+  .status-confirmada, .status-realizada { background:rgba(111,207,151,0.15); color:var(--ok); }
+  .status-cancelada { background:rgba(235,87,87,0.15); color:var(--danger); }
+  .ticket-actions { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+  .ticket-actions button { flex:1; min-width:90px; padding:10px; border-radius:10px; border:none; font-weight:600; font-size:0.8rem; }
+  .btn-confirm { background:var(--ok); color:#12201a; }
+  .btn-reject { background:transparent; border:1px solid var(--danger) !important; color:var(--danger); }
+  .btn-neutral { background:var(--surface-2); color:var(--text); border:1px solid var(--line) !important; }
+
+  .field { margin-bottom:16px; }
+  .field label { display:block; font-size:0.78rem; color:var(--text-dim); margin-bottom:6px; font-weight:600; text-transform:uppercase; letter-spacing:0.03em; }
+  .field input, .field textarea { width:100%; background:var(--surface); border:1px solid var(--line); color:var(--text); padding:12px 14px; border-radius:10px; font-size:0.95rem; }
+  .field textarea { resize:vertical; min-height:70px; }
+
+  .save-bar { position:sticky; bottom:0; background:var(--bg); padding:14px 0 4px; margin-top:8px; border-top:1px solid var(--line); }
+  .save-bar button { width:100%; background:var(--accent); color:#12201a; border:none; font-weight:700; padding:14px; border-radius:12px; font-size:0.95rem; }
+  .save-bar .saved-msg { text-align:center; color:var(--ok); font-size:0.8rem; margin-top:8px; height:14px; }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <h1 class="display">📅 Panel de valoraciones</h1>
+  <p>Acceso privado. Introduce la clave para entrar.</p>
+  <input id="gateInput" type="password" placeholder="Clave de acceso" autocomplete="off" />
+  <button onclick="intentarEntrar()">Entrar</button>
+  <div class="err" id="gateErr"></div>
+</div>
+
+<div id="app">
+  <header class="top">
+    <h1>Luis Felipe Serna</h1>
+    <div class="sub">Valoraciones agendadas por el asistente</div>
+    <nav class="tabs">
+      <button class="active" data-tab="citas" onclick="cambiarTab('citas')">Citas</button>
+      <button data-tab="config" onclick="cambiarTab('config')">Configuración</button>
+    </nav>
+  </header>
+
+  <section class="view active" id="view-citas">
+    <div class="filters">
+      <button class="active" data-f="proximas" onclick="filtrarCitas('proximas')">Próximas</button>
+      <button data-f="todas" onclick="filtrarCitas('todas')">Todas</button>
+    </div>
+    <div id="citasList"></div>
+  </section>
+
+  <section class="view" id="view-config">
+    <div class="field"><label>Nombre del consultor</label><input id="cfgNombre" /></div>
+    <div class="field"><label>Servicios (breve)</label><textarea id="cfgServicios"></textarea></div>
+    <div class="field"><label>Horario disponible</label><textarea id="cfgHorario"></textarea></div>
+    <div class="field"><label>Dirección en Madrid (para presencial)</label><input id="cfgDireccion" /></div>
+    <div class="field"><label>Duración de la valoración</label><input id="cfgDuracion" placeholder="30 minutos" /></div>
+    <div class="save-bar">
+      <button onclick="guardarConfig()">Guardar cambios</button>
+      <div class="saved-msg" id="savedMsg"></div>
+    </div>
+  </section>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyAZVPmQRi6yjG_ujFh67IspCXYqqizsBAk",
+    authDomain: "buss-185dc.firebaseapp.com",
+    databaseURL: "https://buss-185dc-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "buss-185dc",
+    storageBucket: "buss-185dc.firebasestorage.app",
+    messagingSenderId: "334138267009",
+    appId: "1:334138267009:web:0647cff352b51356fa8480"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  // Clave sencilla, no es seguridad real -- cambia este valor si quieres otra.
+  const CLAVE_PANEL = "valoracion2026";
+
+  function intentarEntrar() {
+    const val = document.getElementById('gateInput').value;
+    if (val === CLAVE_PANEL) {
+      sessionStorage.setItem('lfsPanelAuth', '1');
+      document.getElementById('gate').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      iniciarApp();
+    } else {
+      document.getElementById('gateErr').textContent = 'Clave incorrecta';
+    }
+  }
+  document.getElementById('gateInput').addEventListener('keydown', e => { if (e.key === 'Enter') intentarEntrar(); });
+  if (sessionStorage.getItem('lfsPanelAuth') === '1') {
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    window.addEventListener('DOMContentLoaded', iniciarApp);
+  }
+
+  function cambiarTab(tab) {
+    document.querySelectorAll('nav.tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    document.querySelectorAll('section.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + tab));
+  }
+
+  function hoyStr() { return new Date().toISOString().slice(0, 10); }
+  function formatFechaHora(fecha, hora) {
+    if (!fecha) return '';
+    const [y, m, d] = fecha.split('-');
+    return `${d}/${m} · ${hora || ''}`;
+  }
+
+  let citasData = {};
+  let filtroActual = 'proximas';
+
+  function filtrarCitas(f) {
+    filtroActual = f;
+    document.querySelectorAll('.filters button').forEach(b => b.classList.toggle('active', b.dataset.f === f));
+    renderCitas(citasData);
+  }
+
+  function renderCitas(data) {
+    citasData = data || {};
+    const el = document.getElementById('citasList');
+    let entries = Object.entries(citasData).map(([id, c]) => ({ id, ...c }));
+
+    if (filtroActual === 'proximas') {
+      const h = hoyStr();
+      entries = entries.filter(c => c.fecha >= h && c.estado !== 'cancelada');
+    }
+    entries.sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora));
+
+    if (!entries.length) {
+      el.innerHTML = `<div class="empty"><div class="big">📅</div><p>No hay citas en este rango.</p></div>`;
+      return;
+    }
+
+    el.innerHTML = entries.map(c => `
+      <div class="ticket">
+        <div class="ticket-row">
+          <div>
+            <div class="ticket-name">${c.nombre || 'Sin nombre'}</div>
+            <div class="ticket-meta">${c.contacto || ''}</div>
+          </div>
+          <div class="ticket-time">${formatFechaHora(c.fecha, c.hora)}</div>
+        </div>
+        <span class="modalidad-pill modalidad-${c.modalidad === 'video' ? 'video' : 'presencial'}">${c.modalidad === 'video' ? '📹 videollamada' : '📍 presencial Madrid'}</span>
+        ${c.notas ? `<div class="ticket-meta" style="margin-top:6px;">${c.notas}</div>` : ''}
+        <br/><span class="ticket-status status-${c.estado}">${c.estado}</span>
+        <div class="ticket-actions">
+          ${c.estado !== 'confirmada' ? `<button class="btn-confirm" onclick="cambiarEstado('${c.id}','confirmada')">Confirmar</button>` : ''}
+          ${c.estado !== 'realizada' ? `<button class="btn-neutral" onclick="cambiarEstado('${c.id}','realizada')">Realizada</button>` : ''}
+          ${c.estado !== 'cancelada' ? `<button class="btn-reject" onclick="cambiarEstado('${c.id}','cancelada')">Cancelar</button>` : ''}
+        </div>
+      </div>
+    `).join('');
+  }
+  function cambiarEstado(id, estado) {
+    db.ref('valoraciones/citas/' + id).update({ estado });
+  }
+  db.ref('valoraciones/citas').on('value', snap => renderCitas(snap.val()));
+
+  function cargarConfig() {
+    db.ref('valoraciones/configuracion').once('value').then(snap => {
+      const c = snap.val() || {};
+      document.getElementById('cfgNombre').value = c.nombreConsultor || 'Luis Felipe Serna';
+      document.getElementById('cfgServicios').value = c.servicios || '';
+      document.getElementById('cfgHorario').value = c.horarioDisponible || '';
+      document.getElementById('cfgDireccion').value = c.direccionMadrid || '';
+      document.getElementById('cfgDuracion').value = c.duracionValoracion || '30 minutos';
+    });
+  }
+  function guardarConfig() {
+    const data = {
+      nombreConsultor: document.getElementById('cfgNombre').value.trim(),
+      servicios: document.getElementById('cfgServicios').value.trim(),
+      horarioDisponible: document.getElementById('cfgHorario').value.trim(),
+      direccionMadrid: document.getElementById('cfgDireccion').value.trim(),
+      duracionValoracion: document.getElementById('cfgDuracion').value.trim(),
+    };
+    db.ref('valoraciones/configuracion').set(data).then(() => {
+      const msg = document.getElementById('savedMsg');
+      msg.textContent = 'Guardado ✓';
+      setTimeout(() => { msg.textContent = ''; }, 2500);
+    });
+  }
+
+  function iniciarApp() { cargarConfig(); }
+</script>
+</body>
+</html>
